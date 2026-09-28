@@ -71,8 +71,10 @@
     flex-direction: column;
     width: 400px;
     max-width: calc(100vw - 16px);
-    max-height: calc(100vh - 32px);
-    max-height: calc(100dvh - 32px);
+    /* 兜底限高：视口高度减掉上下留白，再多收 100px。JS 会按按钮上方的可用空间写更紧的
+       内联 max-height（手机上底边不许压到输入区那排按钮），这条只是在 JS 未跑时兜底。 */
+    max-height: calc(100vh - 132px);
+    max-height: calc(100dvh - 132px);
     border: 1px solid var(--tia-line);
     border-radius: 14px;
     background: rgba(28, 29, 34, .97);

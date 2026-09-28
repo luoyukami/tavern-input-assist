@@ -113,6 +113,37 @@ export function mergeInput(current, text, mode = 'append') {
     return `${existing.replace(/\s+$/, '')}\n${body}`;
 }
 
+// ---- 面板定位与限高 ----
+// 面板挂在 body 上、用 fixed + top/left 定位，从触发按钮上方弹出。这里是纯计算，
+// 位置和最大高度都能单测；viewport 传视觉视口高度（手机上工具栏会改它）。
+export const PANEL_GAP = 10;             // 面板底边与触发按钮顶边之间的默认间距
+export const PANEL_LIFT = 50;            // 窄屏再往上抬这么多，别压住输入区那排开关按钮
+export const PANEL_MARGIN = 8;           // 视口四边留白
+export const PANEL_HEIGHT_RESERVE = 132; // 最大高度 = 视口高度 - 这个值（上下留白 32 + 再收 100）
+export const PANEL_MIN_HEIGHT = 140;     // 再挤也留这么高，免得面板被压成一条缝
+export const PANEL_COMPACT_WIDTH = 600;  // 与 style.css 里移动端断点保持一致
+
+export function planPanelPlacement({ top = 0, left = 0, width = 0, height = 0, viewportWidth = 0, viewportHeight = 0, compact = false } = {}) {
+    const triggerTop = Number(top) || 0;
+    const gap = PANEL_GAP + (compact ? PANEL_LIFT : 0);
+    const bottomLimit = triggerTop - gap;                 // 面板底边不得低过这里，否则会盖住按钮
+    const room = bottomLimit - PANEL_MARGIN;              // 按钮上方真正能用的高度
+    const cap = viewportHeight > 0 ? viewportHeight - PANEL_HEIGHT_RESERVE : room; // 视口兜底，别伸到屏幕外
+    const maxHeight = Math.max(PANEL_MIN_HEIGHT, Math.min(room, cap));
+    // 面板会被 max-height 截断，所以按截断后的高度反推顶边，底边就永远落在 bottomLimit 上。
+    const drawn = Math.min(Number(height) || maxHeight, maxHeight);
+    const panelTop = Math.max(PANEL_MARGIN, bottomLimit - drawn);
+    let panelLeft = Number(left) || 0;
+    if (width > 0 && viewportWidth > 0 && panelLeft + width > viewportWidth - PANEL_MARGIN) {
+        panelLeft = viewportWidth - PANEL_MARGIN - width;
+    }
+    return { top: panelTop, left: Math.max(PANEL_MARGIN, panelLeft), maxHeight };
+}
+
+export function isCompactPanelLayout(viewportWidth = 0) {
+    return Number(viewportWidth) > 0 && Number(viewportWidth) <= PANEL_COMPACT_WIDTH;
+}
+
 export function safeError(error, secret = '') {
     let text = String(error?.message || error || '未知错误');
     if (secret) text = text.split(secret).join('[已隐藏密钥]');

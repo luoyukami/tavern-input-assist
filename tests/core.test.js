@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULTS, cleanMessage, eligibleMessages, endpoints, loadSettings, mergeInput, planAutoSuggest, resolveContextEnd, routeRequest, safeError, validateConnection, validateEndpoint, validateSettings } from '../core.js';
+import { DEFAULTS, cleanMessage, eligibleMessages, endpoints, isCompactPanelLayout, loadSettings, mergeInput, planAutoSuggest, planPanelPlacement, resolveContextEnd, routeRequest, safeError, validateConnection, validateEndpoint, validateSettings, PANEL_GAP, PANEL_HEIGHT_RESERVE, PANEL_LIFT, PANEL_MARGIN } from '../core.js';
 
 const base = { ...DEFAULTS, model: 'mock-model', baseUrl: 'http://127.0.0.1:8317/v1' };
 const chat = [
@@ -126,4 +126,46 @@ test('safeError 抹掉密钥再给出提示', () => {
     const text = safeError(new Error('failed with sk-secret and Bearer abc.def'), 'sk-secret');
     assert.ok(!text.includes('sk-secret'));
     assert.ok(!text.includes('abc.def'));
+});
+
+test('planPanelPlacement 在窄屏把面板再往上抬 50px', () => {
+    const desktop = planPanelPlacement({ top: 700, left: 8, width: 400, height: 300, viewportWidth: 1280, viewportHeight: 900 });
+    assert.equal(desktop.top, 700 - PANEL_GAP - 300);
+    const phone = planPanelPlacement({ top: 700, left: 8, width: 374, height: 300, viewportWidth: 390, viewportHeight: 844, compact: true });
+    assert.equal(phone.top, 700 - PANEL_GAP - PANEL_LIFT - 300);
+    assert.equal(phone.top + 300, 700 - PANEL_GAP - PANEL_LIFT); // 底边比按钮顶边高 60px
+});
+
+test('planPanelPlacement 面板再高也不压按钮、不伸出屏幕', () => {
+    const phone = planPanelPlacement({ top: 700, left: 8, width: 374, height: 2000, viewportWidth: 390, viewportHeight: 844, compact: true });
+    assert.ok(phone.top >= PANEL_MARGIN, `顶边 ${phone.top} 跑到屏幕外`);
+    assert.equal(phone.top + phone.maxHeight, 700 - PANEL_GAP - PANEL_LIFT);
+    assert.ok(phone.maxHeight <= 844 - PANEL_HEIGHT_RESERVE);
+});
+
+test('planPanelPlacement 极矮视口时按视口兜底限高', () => {
+    const tiny = planPanelPlacement({ top: 280, left: 8, width: 300, height: 2000, viewportWidth: 390, viewportHeight: 320, compact: true });
+    assert.equal(tiny.maxHeight, 320 - PANEL_HEIGHT_RESERVE);      // 视口兜底比按钮上方空间更紧
+    assert.equal(tiny.top + tiny.maxHeight, 280 - PANEL_GAP - PANEL_LIFT);
+    assert.ok(tiny.top + tiny.maxHeight <= 320);
+});
+
+test('planPanelPlacement 矮面板按原高定位，限高只是上限', () => {
+    const short = planPanelPlacement({ top: 700, left: 8, width: 400, height: 200, viewportWidth: 1280, viewportHeight: 900 });
+    assert.equal(short.top, 700 - PANEL_GAP - 200);
+    assert.ok(short.maxHeight > 200, '限高把矮面板压小了');
+});
+
+test('planPanelPlacement 面板太宽就往左收，但不越出视口', () => {
+    const wide = planPanelPlacement({ top: 600, left: 200, width: 374, height: 200, viewportWidth: 390, viewportHeight: 844, compact: true });
+    assert.equal(wide.left, 390 - PANEL_MARGIN - 374);
+    const narrow = planPanelPlacement({ top: 600, left: 8, width: 374, height: 200, viewportWidth: 390, viewportHeight: 844, compact: true });
+    assert.equal(narrow.left, PANEL_MARGIN);
+});
+
+test('isCompactPanelLayout 的断点与 style.css 移动端媒体查询一致', () => {
+    assert.equal(isCompactPanelLayout(390), true);
+    assert.equal(isCompactPanelLayout(600), true);
+    assert.equal(isCompactPanelLayout(601), false);
+    assert.equal(isCompactPanelLayout(0), false);
 });

@@ -1,6 +1,6 @@
 {
   "name": "tavern-input-assist",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "SillyTavern input helper: AI-generated reply options and prompt expansion, injected into the chat input",
   "license": "MIT",

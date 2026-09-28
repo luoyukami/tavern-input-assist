@@ -2,7 +2,7 @@
 // 按钮挂在 #nonQRFormItems 里，面板挂在 body 上 —— 面板用 fixed 定位，脱离酒馆自身的
 // transform 祖先，才不会在手机上被 ST 的 mobile CSS 甩出视口。
 
-import { KEY, loadSettings, mergeInput, planAutoSuggest, resolveContextEnd, safeError } from './core.js';
+import { KEY, isCompactPanelLayout, loadSettings, mergeInput, planAutoSuggest, planPanelPlacement, resolveContextEnd, safeError } from './core.js';
 import { DEFAULT_EXPAND_PRESET, DEFAULT_SUGGEST_PRESET, SUGGEST_KINDS, SUGGEST_LABELS, migratePresets, previewMessages, suggestKind } from './assistant.js';
 import { createService } from './service.js';
 
@@ -288,15 +288,21 @@ function mount() {
     function placePanel() {
         if (panel.hidden || !trigger.isConnected) return;
         const rect = trigger.getBoundingClientRect();
-        const gap = 10;
-        const width = panel.offsetWidth;
-        const height = panel.offsetHeight;
-        // 先向上放；上方实在放不下才贴到视口顶部（CSS 的 max-height 已经限高，不会溢出屏幕）。
-        const top = Math.max(8, rect.top - gap - height);
-        let left = rect.left;
-        if (left + width > innerWidth - 8) left = innerWidth - 8 - width;
-        panel.style.top = `${top}px`;
-        panel.style.left = `${Math.max(8, left)}px`;
+        const { top, left, maxHeight } = planPanelPlacement({
+            top: rect.top,
+            left: rect.left,
+            width: panel.offsetWidth,
+            height: panel.offsetHeight,
+            viewportWidth: innerWidth,
+            viewportHeight: viewportHeight(),
+            compact: isCompactPanelLayout(innerWidth),
+        });
+        // maxHeight 由按钮上方的可用空间决定：面板再高也长不到输入区那排按钮上，
+        // 也不会伸到屏幕外，只会自己滚。只在值变了才写，避免 ResizeObserver 反复触发。
+        const capped = `${Math.round(maxHeight)}px`;
+        if (panel.style.maxHeight !== capped) panel.style.maxHeight = capped;
+        panel.style.top = `${Math.round(top)}px`;
+        panel.style.left = `${Math.round(left)}px`;
     }
 
     function markBadge(on) {
@@ -495,6 +501,9 @@ function mount() {
         if (opened && !panel.contains(event.target) && !trigger.contains(event.target)) close();
     });
     listen(window, 'resize', () => { ensureTrigger(); placePanel(); });
+    // 手机软键盘弹出/收起改的是视觉视口，不一定触发 window resize。跟着重算一次，
+    // 免得面板底边压到输入区、或者高度超出可视区域。
+    if (globalThis.visualViewport) listen(globalThis.visualViewport, 'resize', placePanel);
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(placePanel) : null;
     observer?.observe(panel);
 
