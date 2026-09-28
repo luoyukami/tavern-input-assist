@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>酒馆输入助手 · 本地沙盒</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+    /* 这里近似酒馆的底部输入区与主题变量，用来验证按钮的注入位置和面板弹出方向。 */
+    :root {
+        --mainFontSize: 15px;
+        --bottomFormIconSize: calc(var(--mainFontSize) * 1.9);
+        --bottomFormBlockPadding: 6px;
+        --bottomFormBlockSize: calc(var(--bottomFormIconSize) + var(--bottomFormBlockPadding));
+        --mainFontFamily: system-ui, -apple-system, "Segoe UI", sans-serif;
+        --SmartThemeBodyColor: #eae6e0;
+        --SmartThemeBlurTintColor: #23242a;
+        --SmartThemeBorderColor: rgba(255, 255, 255, .14);
+        --SmartThemeQuoteColor: #d9b382;
+        --SmartThemeBlurStrength: 12px;
+        color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; background: #17181c; color: #eae6e0; font: 14px/1.6 var(--mainFontFamily); }
+    #chat { flex: 1; overflow-y: auto; padding: 16px 14px 8px; }
+    .mes { max-width: 720px; margin: 0 auto 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: #1f2026; }
+    .mes b { display: block; margin-bottom: 5px; font-size: 11px; opacity: .6; }
+    .mes_user { background: #262833; }
+    #form_sheld { padding: 8px 12px 14px; background: #1b1c21; border-top: 1px solid rgba(255,255,255,.1); }
+    #send_form { display: flex; flex-wrap: wrap; align-items: center; }
+    #nonQRFormItems { display: flex; flex-direction: row; align-items: stretch; column-gap: 5px; width: 100%; }
+    #leftSendForm, #rightSendForm { display: flex; flex-wrap: wrap; align-items: center; }
+    #leftSendForm { order: 1; padding-left: 2px; }
+    #rightSendForm { order: 3; padding-right: 2px; }
+    #leftSendForm > div, #rightSendForm > div {
+        display: flex; align-items: center; justify-content: center;
+        width: var(--bottomFormBlockSize); height: var(--bottomFormBlockSize);
+        font-size: var(--bottomFormIconSize); opacity: .7; cursor: pointer;
+    }
+    #send_textarea { flex: 1; order: 3; min-height: 46px; max-height: 160px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: #131418; color: inherit; font: inherit; resize: none; }
+    #mock-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,.08); background: #202127; }
+    #mock-controls button { padding: 7px 11px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; background: rgba(255,255,255,.06); color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+    #mock-controls output { font-size: 11px; opacity: .7; }
+</style>
+</head>
+<body>
+    <div id="chat"></div>
+    <div id="form_sheld">
+        <div id="send_form">
+            <!-- 与酒馆 public/index.html 的输入区结构保持一致 -->
+            <div id="nonQRFormItems">
+                <div id="leftSendForm" class="alignContentCenter"><div id="options_button" class="interactable" title="现有菜单栏（对照用）">☰</div></div>
+                <textarea id="send_textarea" placeholder="Type a message, or /? for help"></textarea>
+                <div id="rightSendForm" class="alignContentCenter"><div id="send_but" class="interactable" title="发送（沙盒里不生效）">➤</div></div>
+            </div>
+        </div>
+    </div>
+    <div id="mock-controls">
+        <button id="sim-reply" type="button">模拟模型回复完成</button>
+        <button id="sim-swipe" type="button">模拟切换 swipe</button>
+        <button id="sim-stop" type="button">模拟用户手动停止</button>
+        <output id="mock-log"></output>
+    </div>
+    <script type="module" src="/dev/mock-st.js"></script>
+</body>
+</html>

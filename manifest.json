@@ -1,0 +1,14 @@
+{
+  "display_name": "酒馆输入助手",
+  "loading_order": 60,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "luoyukami",
+  "homePage": "https://github.com/luoyukami/tavern-input-assist",
+  "version": "1.2.0",
+  "auto_update": false,
+  "minimum_client_version": "1.12.0",
+  "hooks": { "enable": "onEnable", "disable": "onDisable" }
+}

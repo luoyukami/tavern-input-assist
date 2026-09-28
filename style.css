@@ -1,0 +1,302 @@
+/* ===== 触发按钮 =====
+   注入在 #nonQRFormItems 的第一个 DOM 位置。酒馆自己的顺序是 #leftSendForm(order:1)、
+   #send_textarea(order:3)、#rightSendForm(order:3)，所以 order:-1 保证它排在所有
+   兄弟元素之前，也就是整个输入框的最左侧（现有菜单栏的左边），不依赖别的元素怎么改 order。 */
+#nonQRFormItems > .tia-trigger {
+    order: -1;
+    flex: 0 0 auto;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: calc(var(--bottomFormBlockSize, 34px) * 1.12);
+    height: calc(var(--bottomFormBlockSize, 34px) * 1.12);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #eae6e0);
+    /* 必须显式跟着酒馆的图标字号：<button> 不继承容器字号，会退回浏览器默认的 ~13px，
+       于是 svg 的 em 基准只有 13px，图形渲染出来比旁边的 ☰ 小一大圈。 */
+    font-size: var(--bottomFormIconSize, 28px);
+    cursor: pointer;
+    opacity: .78;
+    transition: opacity .18s ease, background-color .18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+/* 放大的是图形本身，按钮占的位置不变 */
+#nonQRFormItems > .tia-trigger svg {
+    width: 1.12em;
+    height: 1.12em;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+#nonQRFormItems > .tia-trigger:hover,
+#nonQRFormItems > .tia-trigger:focus-visible { opacity: 1; background: rgba(255, 255, 255, .07); }
+#nonQRFormItems > .tia-trigger[aria-expanded="true"] { opacity: 1; color: var(--SmartThemeQuoteColor, #d9b382); background: rgba(255, 255, 255, .09); }
+/* 手指不像鼠标那么准，把可点区域往外扩一圈 */
+#nonQRFormItems > .tia-trigger::before { content: ''; position: absolute; inset: -4px -6px; }
+#nonQRFormItems > .tia-trigger .tia-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--SmartThemeQuoteColor, #d9b382);
+    box-shadow: 0 0 0 2px var(--SmartThemeBlurTintColor, #23242a);
+}
+#nonQRFormItems > .tia-trigger.tia-busy svg { animation: tia-spin 1.4s linear infinite; }
+@keyframes tia-spin { to { transform: rotate(360deg); } }
+
+/* ===== 面板：挂在 body 上，靠 top/left 定位，向上弹出 =====
+   面板走固定暗色：选项卡片必须是实色，不然下面聊天的正文会透上来干扰阅读，
+   所以底色与文字色都不跟随可能变亮的主题变量。 */
+#tia-panel {
+    --tia-fg: #eae6e0;
+    --tia-line: rgba(255, 255, 255, .13);
+    --tia-accent: #d9b382;
+    --tia-sunken: #1f2026;
+    position: fixed;
+    top: 24px;
+    left: 8px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    border: 1px solid var(--tia-line);
+    border-radius: 14px;
+    background: rgba(28, 29, 34, .97);
+    color: var(--tia-fg);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+    backdrop-filter: blur(14px);
+    font-family: var(--mainFontFamily, inherit);
+    font-size: 13px;
+    line-height: 1.6;
+    text-align: left;
+    overflow: hidden;
+}
+#tia-panel[hidden] { display: none !important; }
+#tia-panel * { box-sizing: border-box; }
+#tia-panel button, #tia-panel input, #tia-panel select, #tia-panel textarea { font: inherit; color: inherit; }
+#tia-panel button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#tia-panel button:disabled { opacity: .5; cursor: wait; }
+#tia-panel :focus-visible { outline: 2px solid var(--tia-accent); outline-offset: 2px; }
+
+#tia-panel .tia-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--tia-line);
+    flex: 0 0 auto;
+}
+#tia-panel .tia-title { font-size: 13px; letter-spacing: 1.5px; opacity: .85; }
+#tia-panel .tia-icon {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 50%;
+    background: #2a2b32;
+    font-size: 18px; line-height: 1;
+}
+#tia-panel .tia-tabs { display: flex; gap: 4px; padding: 7px 14px 0; border-bottom: 1px solid var(--tia-line); flex: 0 0 auto; }
+#tia-panel .tia-tab {
+    flex: 1;
+    padding: 7px 6px;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 9px 9px 0 0;
+    background: transparent;
+    font-size: 12px;
+    opacity: .68;
+}
+#tia-panel .tia-tab:hover { opacity: 1; }
+#tia-panel .tia-tab[aria-selected="true"] { background: #2c2d34; border-color: var(--tia-line); color: var(--tia-accent); opacity: 1; }
+
+#tia-panel .tia-body { overflow-y: auto; padding: 12px 14px 15px; overscroll-behavior: contain; scrollbar-width: thin; }
+#tia-panel .tia-intro { margin: 0 0 11px; font-size: 11.5px; line-height: 1.65; opacity: .6; }
+#tia-panel .tia-section-label {
+    display: flex; align-items: center; gap: 8px;
+    margin: 16px 0 8px;
+    font-size: 11px; letter-spacing: 1.6px; opacity: .8;
+}
+#tia-panel .tia-section-label::after { content: ''; flex: 1; height: 1px; background: var(--tia-line); }
+
+#tia-panel label { display: block; margin: 10px 0 5px; font-size: 12px; opacity: .82; }
+#tia-panel input:not([type=checkbox]), #tia-panel select, #tia-panel textarea {
+    display: block; width: 100%; min-height: 34px;
+    padding: 7px 9px;
+    border: 1px solid var(--tia-line);
+    border-radius: 7px;
+    background: var(--tia-sunken);
+    box-shadow: none;
+}
+#tia-panel textarea { resize: vertical; min-height: 76px; font-size: 12px; }
+#tia-panel input::placeholder, #tia-panel textarea::placeholder { opacity: .45; }
+#tia-panel .tia-check { display: flex; align-items: center; gap: 7px; font-size: 11.5px; margin-top: 9px; }
+#tia-panel input[type=checkbox] { width: 14px; height: 14px; margin: 0; flex: 0 0 auto; accent-color: var(--tia-accent); }
+#tia-panel .tia-check span { margin-left: auto; font-size: 10px; opacity: .55; }
+#tia-panel .tia-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#tia-panel .tia-columns > div { min-width: 0; }
+
+#tia-panel .tia-row { display: flex; gap: 8px; flex-wrap: wrap; }
+#tia-panel .tia-primary {
+    flex: 1 1 150px;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid var(--tia-accent);
+    border-radius: 8px;
+    background: var(--tia-accent);
+    color: #241d15;
+    font-weight: 600;
+}
+#tia-panel .tia-primary:hover { filter: brightness(1.08); }
+#tia-panel .tia-secondary {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid var(--tia-line);
+    border-radius: 8px;
+    background: #2a2b32;
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+#tia-panel .tia-secondary:hover { background: #33343c; }
+
+#tia-panel .tia-hint { margin: 6px 0 0; font-size: 10.5px; line-height: 1.6; opacity: .55; }
+#tia-panel .tia-hint[data-type=warning] { color: #e8bf87; opacity: 1; }
+#tia-panel .tia-status { margin: 9px 0 0; font-size: 11.5px; line-height: 1.6; opacity: .62; overflow-wrap: anywhere; white-space: pre-line; }
+#tia-panel .tia-status[data-type=error] { color: #f2a2a2; opacity: 1; }
+#tia-panel .tia-status[data-type=warning] { color: #e8bf87; opacity: 1; }
+#tia-panel .tia-status[data-type=success] { color: #a6ceb0; opacity: 1; }
+
+/* ===== 六个选项 =====
+   位置固定，每个位置一个角色，各自一个色相：底是不透明实色，左侧色条与序号共用同一个
+   强调色。全部是低饱和暗色，在面板上分得开但不刺眼。 */
+#tia-panel .tia-options { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+#tia-panel .tia-option {
+    --tia-kind: #7f96b8;
+    --tia-option-bg: #262b33;
+    display: flex; align-items: flex-start; gap: 8px;
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px 8px 9px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-left: 3px solid var(--tia-kind);
+    border-radius: 9px;
+    background: var(--tia-option-bg);
+    color: #e6e2dc;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.5;
+    transition: filter .16s ease, box-shadow .16s ease;
+}
+#tia-panel .tia-option:nth-child(1) { --tia-kind: #7f96b8; --tia-option-bg: #262b33; }
+#tia-panel .tia-option:nth-child(2) { --tia-kind: #87a89c; --tia-option-bg: #242e2b; }
+#tia-panel .tia-option:nth-child(3) { --tia-kind: #b8a689; --tia-option-bg: #302c25; }
+#tia-panel .tia-option:nth-child(4) { --tia-kind: #9b8ac4; --tia-option-bg: #2c2735; }
+#tia-panel .tia-option:nth-child(5) { --tia-kind: #c47b84; --tia-option-bg: #332628; }
+#tia-panel .tia-option:nth-child(6) { --tia-kind: #c9a86a; --tia-option-bg: #332d21; }
+#tia-panel .tia-option:hover,
+#tia-panel .tia-option:focus-visible { filter: brightness(1.16); }
+#tia-panel .tia-option[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--tia-kind); }
+#tia-panel .tia-option-index {
+    flex: 0 0 auto;
+    min-width: 17px; height: 17px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--tia-kind);
+    color: #191a1f;
+    font-size: 10px;
+    font-weight: 600;
+}
+#tia-panel .tia-option-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#tia-panel .tia-option-label {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    font-size: 9px;
+    letter-spacing: .5px;
+    white-space: nowrap;
+    color: var(--tia-kind);
+    opacity: .85;
+}
+
+#tia-panel .tia-result { margin-top: 10px; }
+#tia-panel .tia-result-text {
+    margin: 0 0 9px;
+    padding: 10px 11px;
+    border: 1px solid var(--tia-line);
+    border-radius: 9px;
+    background: var(--tia-sunken);
+    font-size: 12px;
+    line-height: 1.7;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    user-select: text;
+}
+
+#tia-panel .tia-details { margin-top: 12px; padding-top: 9px; border-top: 1px solid var(--tia-line); }
+#tia-panel summary { cursor: pointer; font-size: 11px; opacity: .68; }
+#tia-panel pre {
+    margin: 8px 0 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #191a1f;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 220px;
+    overflow-y: auto;
+    user-select: text;
+}
+
+#tia-panel .tia-model-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+#tia-panel .tia-model-actions .tia-secondary { flex: 1 1 0; }
+#tia-panel .tia-model-list {
+    display: flex; flex-direction: column; gap: 2px;
+    margin-top: 8px; padding: 5px;
+    max-height: 210px; overflow-y: auto; overscroll-behavior: contain;
+    border: 1px solid var(--tia-line); border-radius: 9px;
+    background: #191a1f;
+    scrollbar-width: thin;
+}
+#tia-panel .tia-model-item {
+    display: block; width: 100%; min-height: 36px;
+    padding: 8px 10px;
+    border: 0; border-radius: 6px;
+    background: transparent;
+    text-align: left;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+#tia-panel .tia-model-item:hover, #tia-panel .tia-model-item:focus-visible { background: #2a2b32; }
+#tia-panel .tia-model-item[aria-pressed="true"] { background: rgba(217, 179, 130, .2); color: var(--tia-accent); }
+
+@media (max-width: 600px) {
+    #tia-panel { width: auto; right: 8px; font-size: 13px; }
+    #tia-panel input:not([type=checkbox]), #tia-panel select, #tia-panel textarea { font-size: 16px; }
+    #tia-panel .tia-body { padding: 11px 12px 13px; }
+    #tia-panel .tia-option { padding: 8px 9px; font-size: 13px; }
+    #tia-panel .tia-option-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #nonQRFormItems > .tia-trigger, #tia-panel * { animation: none !important; transition: none !important; }
+}
