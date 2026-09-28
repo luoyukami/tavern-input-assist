@@ -20,7 +20,16 @@ const context = {
     // 模拟酒馆的世界书激活（真实逻辑在酒馆自己的 world-info.js 里）。这里只造一份可控的返回，
     // 顺便记录调用参数，好确认我们确实按酒馆的规矩在问。
     async getWorldInfoPrompt(chat, maxContext, isDryRun, scanData) {
-        qa.worldInfoCalls.push({ maxContext, isDryRun, scanData, chatLength: Array.isArray(chat) ? chat.length : 0 });
+        // 忠实复刻真酒馆的契约：WorldInfoBuffer 会对每一项调 .trim()，深度 0 是最新一条。
+        // 传消息对象进来这里必须炸出来，否则「世界书静默变空」这类 bug 沙盒永远抓不到。
+        for (const row of Array.isArray(chat) ? chat : []) {
+            if (typeof row !== 'string') throw new TypeError(`messages[depth].trim is not a function（收到 ${typeof row}，真酒馆也会这样炸）`);
+        }
+        const expectedNewest = [...context.chat].reverse().find(row => !row.is_system)?.mes ?? '';
+        if (expectedNewest && chat[0] !== undefined && typeof chat[0] === 'string' && !String(chat[0]).includes(expectedNewest)) {
+            throw new Error('世界书扫描数组的第 0 项不是最新一条（真酒馆传的是倒序的 coreChat）');
+        }
+        qa.worldInfoCalls.push({ maxContext, isDryRun, scanData, chatLength: Array.isArray(chat) ? chat.length : 0, head: chat?.[0] });
         return qa.worldInfo ?? { worldInfoString: '', worldInfoBefore: '', worldInfoAfter: '', worldInfoExamples: [], worldInfoDepth: [] };
     },
     eventSource: {

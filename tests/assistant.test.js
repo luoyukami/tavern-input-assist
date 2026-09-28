@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_EXPAND_PRESET, DEFAULT_SUGGEST_PRESET, LEGACY_SUGGEST_PRESETS, SUGGEST_KINDS, SUGGEST_LABELS, buildExpandMessages, buildSuggestMessages, buildWorldInfoBlock, extractText, fillTemplate, firstBalancedArray, migratePresets, names, parseExpansion, parseSuggestions, stripFence, stripWrappers, suggestKind } from '../assistant.js';
+import { DEFAULT_EXPAND_PRESET, DEFAULT_SUGGEST_PRESET, LEGACY_SUGGEST_PRESETS, SUGGEST_KINDS, SUGGEST_LABELS, buildExpandMessages, buildSuggestMessages, buildWorldInfoBlock, extractText, fillTemplate, firstBalancedArray, migratePresets, names, parseExpansion, parseSuggestions, stripFence, stripWrappers, suggestKind, worldInfoScanChat } from '../assistant.js';
 import { DEFAULTS } from '../core.js';
 
 const settings = { ...DEFAULTS, model: 'm', recentCount: 3 };
@@ -195,6 +195,42 @@ test('buildWorldInfoBlock 走酒馆自己的激活逻辑，并合并 @Depth 条�
     assert.equal(calls[0].chatLength, 3);
     assert.equal(calls[0].scanData.characterDescription, '银发酒保');
     assert.equal(calls[0].scanData.scenario, '雨夜');
+});
+
+// 这条防的是真出过的 bug：酒馆的 WorldInfoBuffer 会对每条消息调 .trim()，
+// 传消息对象进去会抛错并被 try/catch 吞掉，世界书静默变成空的（表现就是「世界书没加载」）。
+test('buildWorldInfoBlock 喂给酒馆的是字符串数组，且深度 0 是最新一条', async () => {
+    const seen = [];
+    const ctx = {
+        ...context,
+        chat: [
+            { name: '莉娅', mes: '第一句' },
+            { name: '旅行者', mes: '第二句', is_user: true },
+            { name: '', mes: '第三句' },
+            { name: '旁白', mes: '系统注记', is_system: true },
+        ],
+        getWorldInfoPrompt: async chat => { seen.push(chat); return { worldInfoString: '设定' }; },
+    };
+    await buildWorldInfoBlock(ctx, { maxChars: 100 });
+    assert.deepEqual(seen[0], ['第三句', '旅行者: 第二句', '莉娅: 第一句']);
+    for (const row of seen[0]) assert.equal(typeof row, 'string', 'WorldInfoBuffer 会对每一项调 .trim()');
+});
+
+test('worldInfoScanChat 只取最近 1000 层，倒序，没有名字就只给内容', () => {
+    const many = Array.from({ length: 1200 }, (_, index) => ({ name: 'N', mes: `第${index}句` }));
+    const out = worldInfoScanChat(many);
+    assert.equal(out.length, 1000);
+    assert.equal(out[0], 'N: 第1199句');
+    assert.equal(out.at(-1), 'N: 第200句');
+    assert.deepEqual(worldInfoScanChat(undefined), []);
+    assert.deepEqual(worldInfoScanChat([]), []);
+});
+
+test('世界书扫描带上 trigger=normal，带触发条件的条目才激活得了', async () => {
+    const seen = [];
+    const ctx = { ...context, getWorldInfoPrompt: async (chat, maxContext, isDryRun, scanData) => { seen.push(scanData); return { worldInfoString: 'x' }; } };
+    await buildWorldInfoBlock(ctx, { maxChars: 100 });
+    assert.equal(seen[0].trigger, 'normal');
 });
 
 test('buildWorldInfoBlock 拿不到就静默返回空串，不影响出选项', async () => {

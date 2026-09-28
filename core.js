@@ -15,6 +15,11 @@ export const DEFAULTS = Object.freeze({
     worldInfoMaxChars: 4000,
     injectMode: 'append',
     autoSuggest: false,
+    polishAuto: false,
+    polishModel: '',
+    polishContext: 2,
+    polishStrip: '',
+    polishBuiltinStrip: true,
     activeTab: 'suggest',
 });
 
@@ -63,6 +68,8 @@ export function validateConnection(settings) {
     if (!Number.isFinite(seconds) || seconds < 10 || seconds > 600) throw new Error('最长等待必须是 10–600 秒。');
     const chars = Number(settings.worldInfoMaxChars);
     if (!Number.isInteger(chars) || chars < 200 || chars > 20000) throw new Error('世界书字数上限必须是 200–20000 的整数。');
+    const polishFloors = Number(settings.polishContext);
+    if (!Number.isInteger(polishFloors) || polishFloors < 0 || polishFloors > 20) throw new Error('润色的上下文层数必须是 0–20 的整数。');
     if (!['append', 'replace'].includes(settings.injectMode)) throw new Error('注入方式无效。');
     return settings;
 }

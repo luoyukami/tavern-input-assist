@@ -2,6 +2,7 @@
 
 import { apiRequest, cleanMessage, resolveContextEnd, validateConnection, validateEndpoint } from './core.js';
 import { SUGGEST_KINDS, buildExpandMessages, buildSuggestMessages, buildWorldInfoBlock, extractText, parseExpansion, parseSuggestions } from './assistant.js';
+import { buildPolishMessages, loadRegexEngine, parsePolished, polishModelFor } from './polish.js';
 
 const WORLD_INFO_DEFAULT_CHARS = 4000;
 
@@ -31,6 +32,26 @@ export function createService(getContext, fetchImpl = fetch) {
             const { messages, input: source, count, worldInfoLength } = buildExpandMessages(context, settings, input, info);
             const body = await chat(settings, messages, signal);
             return { text: parseExpansion(extractText(body)), source, count, model: settings.model, worldInfoLength };
+        },
+        // 润色：同一个渠道与密钥，只把模型名换成润色模型（留空则跟主模型一样）。
+        async polish(settings, index, signal) {
+            const context = getContext();
+            await loadRegexEngine();
+            const info = await worldInfo(settings, context);
+            const built = buildPolishMessages(context, settings, index, info);
+            const model = polishModelFor(settings);
+            const body = await chat({ ...settings, model }, built.messages, signal);
+            return {
+                index: built.index, original: built.original, prose: built.prose, split: built.split,
+                text: parsePolished(extractText(body)),
+                count: built.count, worldInfoLength: built.worldInfoLength, model,
+            };
+        },
+        async previewPolish(settings, index) {
+            const context = getContext();
+            await loadRegexEngine();
+            const info = await worldInfo(settings, context);
+            return buildPolishMessages(context, settings, index, info);
         },
         async listModels(settings, signal) {
             // 只校验地址与连接方式：全新安装时模型名还是空的，正是要靠这一步把列表拉出来。

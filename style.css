@@ -292,12 +292,48 @@
 #tia-panel .tia-model-item:hover, #tia-panel .tia-model-item:focus-visible { background: #2a2b32; }
 #tia-panel .tia-model-item[aria-pressed="true"] { background: rgba(217, 179, 130, .2); color: var(--tia-accent); }
 
+/* ===== 正文润色 =====
+   两版对照：原版灰条、润色版暖色条，正文用实色底（和选项卡片同一个理由：不能让聊天的字透上来）。 */
+#tia-panel .tia-compare { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+#tia-panel .tia-compare-col { min-width: 0; }
+#tia-panel .tia-compare-label { display: block; margin: 0 0 4px; font-size: 10px; letter-spacing: 1.6px; opacity: .8; }
+#tia-panel .tia-compare-col:nth-child(1) .tia-compare-label { color: #9aa3b2; }
+#tia-panel .tia-compare-col:nth-child(2) .tia-compare-label { color: var(--tia-accent); }
+#tia-panel .tia-compare-col:nth-child(1) .tia-result-text { border-left: 3px solid #5d6675; }
+#tia-panel .tia-compare-col:nth-child(2) .tia-result-text { border-left: 3px solid var(--tia-accent); }
+#tia-panel .tia-compare[data-mode="draft"] .tia-compare-col:nth-child(2) .tia-compare-label,
+#tia-panel .tia-compare[data-mode="draft"] .tia-compare-col:nth-child(2) .tia-result-text { border-left-color: #e8bf87; }
+#tia-panel .tia-polish-actions { margin-top: 10px; }
+#tia-panel .tia-polish-actions .tia-secondary { flex: 1 1 auto; }
+
+/* 消息按钮行里的润色图标：跟酒馆自己的 .mes_button 同一套外观。别给按钮本身写死宽高 ——
+   .mes_button 是 border-box 且自带 padding，写死 1em 会把图标挤扁（量出来宽 12px 高 18px）。
+   让容器由 1em 的 svg 撑开，尺寸就和旁边的 fa 图标一致了。 */
+#chat .mes .tia-polish-btn {
+    display: flex; align-items: center; justify-content: center;
+    color: inherit;
+}
+#chat .mes .tia-polish-btn svg {
+    display: block;
+    width: 1em; height: 1em;
+    fill: none; stroke: currentColor;
+    stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+#chat .mes .tia-polish-btn.tia-record { opacity: .72; }
+#chat .mes .tia-polish-btn.tia-active {
+    opacity: 1;
+    color: #d9b382;
+    filter: drop-shadow(0 0 3px rgba(217, 179, 130, .55));
+}
+
 @media (max-width: 600px) {
     #tia-panel { width: auto; right: 8px; font-size: 13px; }
     #tia-panel input:not([type=checkbox]), #tia-panel select, #tia-panel textarea { font-size: 16px; }
     #tia-panel .tia-body { padding: 11px 12px 13px; }
     #tia-panel .tia-option { padding: 8px 9px; font-size: 13px; }
     #tia-panel .tia-option-label { display: none; }
+    #tia-panel .tia-compare .tia-result-text { max-height: 150px; font-size: 12.5px; }
+    #tia-panel .tia-polish-actions .tia-secondary { flex: 1 1 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
     #nonQRFormItems > .tia-trigger, #tia-panel * { animation: none !important; transition: none !important; }

@@ -193,6 +193,8 @@ export function buildHistory(context, settings, endIndex) {
 // 世界书的上下文预算。酒馆用它按比例裁剪激活条目，这里给一个常见上下文长度即可，
 // 真正的长度控制在下面的 maxChars。
 const WORLD_INFO_MAX_CONTEXT = 8192;
+// 酒馆 MAX_SCAN_DEPTH 的同名上限：扫描只看最近这么多层。
+const WORLD_INFO_MAX_MESSAGES = 1000;
 
 // 告诉世界书扫描器当前的角色卡内容，让「限定角色」的条目也能按酒馆自己的规则命中。
 function worldInfoScanData(context) {
@@ -204,7 +206,28 @@ function worldInfoScanData(context) {
         characterDepthPrompt: String(character.charDepthPrompt ?? character.depth_prompt?.prompt ?? ''),
         scenario: String(character.scenario ?? ''),
         creatorNotes: String(character.creator_notes ?? ''),
+        // 酒馆按生成类型筛条目（普通生成 = normal），不填就是 undefined，
+        // 带 trigger 条件的条目会静默不激活。
+        trigger: 'normal',
     };
+}
+
+// 世界书扫描要吃的是**字符串数组，且深度 0 是最新一条**：酒馆自己传的是
+// `coreChat.map(x => `${x.name}: ${x.mes}`).reverse()`。传消息对象进来会死在
+// WorldInfoBuffer 的 `messages[depth].trim()` 上（对象没有 trim），异常被下面的
+// try/catch 吞掉，世界书就静默变成空的 —— 表现得像「世界书没加载」，日志里一句都没有。
+export function worldInfoScanChat(chat) {
+    const rows = Array.isArray(chat) ? chat : [];
+    return rows
+        .filter(row => row && typeof row === 'object' && !row.is_system)
+        // 酒馆的 MAX_SCAN_DEPTH = 1000：再往前的楼层它根本不看，多传没用。
+        .slice(-WORLD_INFO_MAX_MESSAGES)
+        .map(row => {
+            const name = String(row.name ?? '').trim();
+            const mes = String(row.mes ?? '');
+            return name ? `${name}: ${mes}` : mes;
+        })
+        .reverse();
 }
 
 // 用酒馆自己的激活逻辑取世界书，这样和真正发给模型的内容一致。
@@ -213,7 +236,7 @@ export async function buildWorldInfoBlock(context, { maxChars = 4000 } = {}) {
     if (typeof context?.getWorldInfoPrompt !== 'function') return '';
     let result;
     try {
-        result = await context.getWorldInfoPrompt(context.chat, WORLD_INFO_MAX_CONTEXT, true, worldInfoScanData(context));
+        result = await context.getWorldInfoPrompt(worldInfoScanChat(context.chat), WORLD_INFO_MAX_CONTEXT, true, worldInfoScanData(context));
     } catch {
         return '';
     }
